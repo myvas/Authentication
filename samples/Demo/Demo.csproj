@@ -20,8 +20,4 @@
     <ProjectReference Include="..\..\src\WeixinAuth\WeixinAuth.csproj" />
     <ProjectReference Include="..\..\src\WeixinOpen\WeixinOpen.csproj" />
   </ItemGroup>
-
-  <Target Name="PrecompileScript" BeforeTargets="BeforeBuild">
-    <Exec Command="bower install --allow-root" />
-  </Target>
 </Project>
