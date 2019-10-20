@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -7,6 +7,7 @@ using Demo.Data;
 using Microsoft.AspNetCore;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 
 namespace Demo
@@ -15,25 +16,18 @@ namespace Demo
     {
         public static void Main(string[] args)
         {
-            CreateWebHostBuilder(args)
-                .Build()
+            BuildWebHost(args)
                 .MigrateDatabase()
                 .SeedDatabase()
                 .Run();
         }
 
-        public static IWebHostBuilder CreateWebHostBuilder(string[] args)
-            => new WebHostBuilder()
-                .UseKestrel()
-                .UseContentRoot(Directory.GetCurrentDirectory())
-
-                .ConfigureAppConfiguration(ConfigureAppConfiguration)
+        public static IWebHost BuildWebHost(string[] args) =>
+            WebHost.CreateDefaultBuilder(args)
+                .ConfigureAppConfiguration( ConfigureAppConfiguration)
                 .ConfigureLogging(ConfigureLogging)
-
-                .UseIISIntegration()
-                .UseDefaultServiceProvider(DefaultServiceProvider)
-                //.CaptureStartupErrors(true)
-                .UseStartup<Startup>();
+                .UseStartup<Startup>()
+                .Build();
 
         private static void ConfigureAppConfiguration(WebHostBuilderContext hostingContext, IConfigurationBuilder config)
         {
@@ -56,12 +50,6 @@ namespace Demo
             logging.AddConfiguration(hostingContext.Configuration.GetSection("Logging"));
             logging.AddConsole();
             logging.AddDebug();
-        }
-
-        private static void DefaultServiceProvider(WebHostBuilderContext hostingContext, Microsoft.Extensions.DependencyInjection.ServiceProviderOptions options)
-        {
-            // To detect: InvalidOperationException: Cannot consume scoped service 'Ruhu.AppDbContext' from singleton 'Microsoft.AspNetCore.Authorization.IAuthorizationHandler'.
-            options.ValidateScopes = hostingContext.HostingEnvironment.IsDevelopment();
         }
     }
 }

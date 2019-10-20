@@ -3,7 +3,7 @@ using System.Threading.Tasks;
 
 namespace Myvas.AspNetCore.TencentSms
 {
-    internal static class TencentSmsSenderExtensions
+    public static class TencentSmsSenderExtensions
     {
         /// <summary>
         /// 发送验证码短信

@@ -1,4 +1,4 @@
-﻿using Myvas.AspNetCore.Authentication.QQConnect;
+using Myvas.AspNetCore.Authentication.QQConnect;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.Facebook;
 using Microsoft.AspNetCore.Authentication.OAuth;
@@ -73,7 +73,7 @@ namespace UnitTest
                 {
                     OnCreatingTicket = context =>
                     {
-                        Assert.NotNull(context.User);
+                        Assert.NotEqual("", context.User.GetString());
                         Assert.Equal("Test Access Token", context.AccessToken);
                         Assert.Equal("Test Refresh Token", context.RefreshToken);
                         Assert.Equal(TimeSpan.FromSeconds(3600), context.ExpiresIn);
@@ -1065,7 +1065,7 @@ namespace UnitTest
                 {
                     OnCreatingTicket = context =>
                     {
-                        Assert.NotNull(context.User);
+                        Assert.NotEqual("", context.User.GetString());
                         Assert.Equal("Test Access Token", context.AccessToken);
                         Assert.Equal("Test Refresh Token", context.RefreshToken);
                         Assert.Equal(TimeSpan.FromSeconds(3600), context.ExpiresIn);
