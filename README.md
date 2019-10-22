@@ -10,7 +10,7 @@ https://www.nuget.org/packages/Myvas.AspNetCore.Authentication.WeixinOpen
 https://www.nuget.org/packages/Myvas.AspNetCore.Authentication.QQConnect
 
 ## Demo Online
-- http://demo.auth.myvas.com (debian.8-x64)
+- http://demo.auth.myvas.com (debian.9-x64)
 - Qrcode to enter the demo weixin service account:
 
 ![alt QrCode](http://mmbiz.qpic.cn/mmbiz_jpg/lPe5drS9euRQR1eCK5cGXaibHYL6vBR4pGLB34ju2hXCiaMQiayOU8w5GMfEH7WZsVNTnhLTpnzAC9xfdWuTT89OA/0)
@@ -53,10 +53,10 @@ services.AddAuthentication()
 ```
 
 ## How to Build
-* Visual Studio 2017 v15.8.7+ and dotnet-sdk-2.1.403
+* Visual Studio 2019 v16.3.5+ and dotnet-sdk-2.2.109
 
 ## Dev Tools
-* [微信开发者工具 v1.02.1806080](https://mp.weixin.qq.com/debug/wxadoc/dev/devtools/download.html)
+* [微信开发者工具 v1.02.1910120](https://mp.weixin.qq.com/debug/wxadoc/dev/devtools/download.html)
 
 # 微信开放平台/微信公众平台/QQ开放平台配置
 
