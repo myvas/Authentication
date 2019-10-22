@@ -19,13 +19,13 @@ namespace BlazorDemo.Client.States
             this._authorizeApi = authorizeApi;
         }
 
-        public async Task Login(LoginParameters loginParameters)
+        public async Task Login(LoginInputModel loginParameters)
         {
             await _authorizeApi.Login(loginParameters);
             NotifyAuthenticationStateChanged(GetAuthenticationStateAsync());
         }
 
-        public async Task Register(RegisterParameters registerParameters)
+        public async Task Register(RegisterInputModel registerParameters)
         {
             await _authorizeApi.Register(registerParameters);
             NotifyAuthenticationStateChanged(GetAuthenticationStateAsync());

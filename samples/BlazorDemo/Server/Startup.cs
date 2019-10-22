@@ -10,6 +10,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
+using Myvas.AspNetCore.Authentication;
 using System;
 using System.Linq;
 using System.Threading.Tasks;
@@ -31,7 +32,7 @@ namespace BlazorDemo.Server
         {
             services.AddDbContext<AppDbContext>(options =>
             options.UseSqlite(Configuration.GetConnectionString("DefaultConnection"),
-            x => x.MigrationsAssembly("Demo.Data")));
+            x => x.MigrationsAssembly("BlazorDemo.Server")));
 
             services.AddIdentity<AppUser, AppRole>()
                 .AddEntityFrameworkStores<AppDbContext>()
@@ -56,6 +57,39 @@ namespace BlazorDemo.Server
 
                 // User settings
                 options.User.RequireUniqueEmail = false;
+            });
+
+            services.AddAuthentication()
+                .AddWeixinOpen(options =>
+                {
+                    options.AppId = Configuration["WeixinOpen:AppId"];
+                    options.AppSecret = Configuration["WeixinOpen:AppSecret"];
+                    options.SaveTokens = true;
+                })
+                .AddWeixinAuth(options =>
+                {
+                    options.AppId = Configuration["WeixinAuth:AppId"];
+                    options.AppSecret = Configuration["WeixinAuth:AppSecret"];
+                    options.SilentMode = false; //不采用静默模式
+                                                //options.SaveTokens = true;
+                })
+                .AddQQConnect(options =>
+                {
+                    options.AppId = Configuration["QQConnect:AppId"];
+                    options.AppKey = Configuration["QQConnect:AppKey"];
+                    //options.SaveTokens = true;
+
+                    QQConnectScopes.TryAdd(options.Scope,
+                        QQConnectScopes.get_user_info,
+                        QQConnectScopes.list_album,
+                        QQConnectScopes.upload_pic,
+                        QQConnectScopes.do_like);
+                });
+
+            services.AddTencentSms(options =>
+            {
+                options.SdkAppId = Configuration["TencentSms:SdkAppId"];
+                options.AppKey = Configuration["TencentSms:AppKey"];
             });
 
             services.Configure<ApiBehaviorOptions>(options =>

@@ -10,6 +10,17 @@
     <PackageReference Include="Microsoft.AspNetCore.Identity.EntityFrameworkCore" Version="3.0.0" />
     <PackageReference Include="Microsoft.AspNetCore.Mvc.NewtonsoftJson" Version="3.0.0" />
     <PackageReference Include="Microsoft.EntityFrameworkCore.Sqlite" Version="3.0.0" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore.SqlServer" Version="3.0.0" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore.Tools" Version="3.0.0">
+      <PrivateAssets>all</PrivateAssets>
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+    </PackageReference>
+    <PackageReference Include="Microsoft.Extensions.Logging.Debug" Version="3.0.0" />
+    <PackageReference Include="Microsoft.VisualStudio.Web.CodeGeneration.Design" Version="3.0.0" />
+    <PackageReference Include="Myvas.AspNetCore.Authentication.QQConnect" Version="2.1.507" />
+    <PackageReference Include="Myvas.AspNetCore.Authentication.WeixinAuth" Version="2.1.508" />
+    <PackageReference Include="Myvas.AspNetCore.Authentication.WeixinOpen" Version="2.1.509" />
+    <PackageReference Include="Myvas.AspNetCore.TencentSms" Version="2.1.404" />
   </ItemGroup>
 
   <ItemGroup>

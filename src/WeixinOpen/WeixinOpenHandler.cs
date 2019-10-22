@@ -25,10 +25,7 @@ namespace Myvas.AspNetCore.Authentication.WeixinOpen
 
         public WeixinOpenHandler(
             IWeixinOpenApi api,
-            IOptionsMonitor<WeixinOpenOptions> options,
-            ILoggerFactory loggerFactory,
-            UrlEncoder encoder,
-            ISystemClock clock)
+            IOptionsMonitor<WeixinOpenOptions> options, ILoggerFactory loggerFactory, UrlEncoder encoder, ISystemClock clock)
             : base(options, loggerFactory, encoder, clock)
         {
             _api = api ?? throw new ArgumentNullException(nameof(api));

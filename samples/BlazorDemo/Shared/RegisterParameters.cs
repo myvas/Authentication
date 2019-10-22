@@ -2,7 +2,7 @@
 
 namespace BlazorDemo.Shared
 {
-    public class RegisterParameters
+    public class RegisterInputModel
     {
         [Required]
         public string UserName { get; set; }

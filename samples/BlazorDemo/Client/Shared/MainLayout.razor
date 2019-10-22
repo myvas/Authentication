@@ -2,39 +2,16 @@
 @inject NavigationManager navigationManager
 @inject IdentityAuthenticationStateProvider authStateProvider
 
-<AuthorizeView>
-    <Authorized>
-        <div class="sidebar">
-            <NavMenu />
-        </div>
+<div class="sidebar">
+    <NavMenu />
+</div>
 
-        <div class="main">
-            <div class="top-row px-4">
-                <button type="button" class="btn btn-link ml-md-auto" @onclick="@LogoutClick">Logout</button>
-            </div>
+<div class="main">
+    <div class="top-row px-4">
+        <LoginDisplay />
+    </div>
 
-            <div class="content px-4">
-                @Body
-            </div>
-        </div>
-    </Authorized>
-</AuthorizeView>
-
-@code {
-    [CascadingParameter]
-    Task<AuthenticationState> AuthenticationState { get; set; }
-
-    protected override async Task OnParametersSetAsync()
-    {
-        if (!(await AuthenticationState).User.Identity.IsAuthenticated)
-        {
-            navigationManager.NavigateTo("/login");
-        }
-    }
-
-    async Task LogoutClick()
-    {
-        await authStateProvider.Logout();
-        navigationManager.NavigateTo("/login");
-    }
-}
+    <div class="content px-4">
+        @Body
+    </div>
+</div>

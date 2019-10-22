@@ -8,7 +8,10 @@ namespace Demo.Models
 {
     public class AppUser : IdentityUser
     {
+        public string Idcard { get; set; }
+        public string FullName { get; set; }
     }
+
     public class AppRole : IdentityRole
     {
     }

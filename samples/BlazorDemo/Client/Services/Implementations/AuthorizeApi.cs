@@ -25,7 +25,7 @@ namespace BlazorDemo.Client.Services.Implementations
             return result;
         }
 
-        public async Task Login(LoginParameters loginParameters)
+        public async Task Login(LoginInputModel loginParameters)
         {
             var stringContent = new StringContent(JsonSerializer.Serialize(loginParameters), Encoding.UTF8, "application/json");
             var result = await _httpClient.PostAsync("api/Authorize/Login", stringContent);
@@ -39,7 +39,7 @@ namespace BlazorDemo.Client.Services.Implementations
             result.EnsureSuccessStatusCode();
         }
 
-        public async Task Register(RegisterParameters registerParameters)
+        public async Task Register(RegisterInputModel registerParameters)
         {
             var stringContent = new StringContent(JsonSerializer.Serialize(registerParameters), Encoding.UTF8, "application/json");
             var result = await _httpClient.PostAsync("api/Authorize/Register", stringContent);

@@ -24,10 +24,102 @@ namespace Demo.Models
         {
         }
 
-        public virtual async Task<AppUser> FindByPhoneNumberAsync(string phoneNumber)
+        public async Task<AppUser> FindUniqueAsync(string key)
         {
-            return await Users.FirstOrDefaultAsync(x => x.PhoneNumber == phoneNumber);
+            try
+            {
+                var user = await FindByPhoneNumberUniqueOrDefaultAsync(key);
+                if (user == null)
+                {
+                    user = await FindByIdcardUniqueOrDefaultAsync(key);
+                }
+                if (user == null)
+                {
+                    user = await FindByFullNameUniqueOrDefaultAsync(key);
+                }
+                if (user == null)
+                {
+                    user = await FindByEmailAsync( key);
+                }
+                if (user == null)
+                {
+                    user = await FindByNameAsync(key);
+                }
+                return user;
+            }
+            catch
+            {
+                return null;
+            }
         }
+
+        #region Exists...
+        public async Task<bool> ExistsPhoneNumberAsync(string phoneNumber)
+        {
+            return await Users.AnyAsync(x => x.PhoneNumber == phoneNumber);
+        }
+
+        public async Task<bool> ExistsEmailAsync(string email)
+        {
+            return await Users.AnyAsync(x => x.Email == email);
+        }
+
+        public async Task<bool> ExistsFullNameAsync(string fullName)
+        {
+            return await Users.AnyAsync(x => x.PhoneNumber == fullName);
+        }
+
+        public async Task<bool> ExistsUserNameAsync(string userName)
+        {
+            return await Users.AnyAsync(x => x.UserName == userName);
+        }
+
+        public async Task<bool> ExistsIdcardAsync(string idcard)
+        {
+            return await Users.AnyAsync(x => x.Idcard == idcard);
+        }
+        #endregion
+
+        #region Find...
+        public async Task<AppUser> FindByPhoneNumberUniqueOrDefaultAsync(string phoneNumber)
+        {
+            try
+            {
+                return await Users.SingleOrDefaultAsync(x => x.PhoneNumber == phoneNumber);
+            }
+            catch
+            {
+                return null;
+            }
+        }
+
+        public async Task<AppUser> FindByIdcardUniqueOrDefaultAsync(string idcard)
+        {
+            try
+            {
+                return await Users.SingleOrDefaultAsync(x => x.Idcard == idcard);
+            }
+            catch
+            {
+                return null;
+            }
+        }
+
+        public async Task<AppUser> FindByFullNameUniqueOrDefaultAsync(string phoneNumber, bool confirmedOnly = true)
+        {
+            try
+            {
+                if (confirmedOnly)
+                    return await Users.SingleOrDefaultAsync(x => x.PhoneNumber == phoneNumber && x.PhoneNumberConfirmed);
+                else
+                    return await Users.SingleOrDefaultAsync(x => x.PhoneNumber == phoneNumber);
+            }
+            catch
+            {
+                return null;
+            }
+        }
+        #endregion
 
         public virtual async Task<IdentityResult> VerifyAndConfirmPhoneNumberAsync(AppUser user, string code)
         {
@@ -47,7 +139,7 @@ namespace Demo.Models
 
         public virtual async Task<(AppUser user, string code)> GenerateChangePhoneNumberTokenAsync(string phoneNumber)
         {
-            var user = await FindByPhoneNumberAsync(phoneNumber);
+            var user = await FindByPhoneNumberUniqueOrDefaultAsync(phoneNumber);
             if (user == null)
             {
                 user = new AppUser { UserName = phoneNumber, PhoneNumber = phoneNumber };
@@ -78,7 +170,7 @@ namespace Demo.Models
             {
                 throw new ArgumentNullException(nameof(token));
             }
-            var user = await FindByPhoneNumberAsync(phoneNumber);
+            var user = await FindByPhoneNumberUniqueOrDefaultAsync(phoneNumber);
             if (user == null)
             {
                 throw new ArgumentNullException($"User associated with phone number {phoneNumber} not exists!");

@@ -12,23 +12,23 @@ namespace BlazorDemo.Server.Controllers
     [ApiController]
     public class AuthorizeController : ControllerBase
     {
-        private readonly UserManager<AppUser> _userManager;
+        private readonly AppUserManager _userManager;
         private readonly SignInManager<AppUser> _signInManager;
 
-        public AuthorizeController(UserManager<AppUser> userManager, SignInManager<AppUser> signInManager)
+        public AuthorizeController(AppUserManager userManager, SignInManager<AppUser> signInManager)
         {
             _userManager = userManager;
             _signInManager = signInManager;
         }
 
         [HttpPost]
-        public async Task<IActionResult> Login(LoginParameters parameters)
+        public async Task<IActionResult> Login(LoginInputModel parameters)
         {
             if (!ModelState.IsValid) return BadRequest(ModelState.Values.SelectMany(state => state.Errors)
                                                                         .Select(error => error.ErrorMessage)
                                                                         .FirstOrDefault());
 
-            var user = await _userManager.FindByNameAsync(parameters.UserName);
+            var user = await _userManager.FindUniqueAsync(parameters.Key);
             if (user == null) return BadRequest("User does not exist");
             var singInResult = await _signInManager.CheckPasswordSignInAsync(user, parameters.Password, false);
             if (!singInResult.Succeeded) return BadRequest("Invalid password");
@@ -38,9 +38,42 @@ namespace BlazorDemo.Server.Controllers
             return Ok();
         }
 
+        [HttpPost]
+        public async Task<IActionResult> LoginViaSmsCode(LoginViaCodeInputModel parameters)
+        {
+            if (!ModelState.IsValid) return BadRequest(ModelState.Values.SelectMany(state => state.Errors)
+                                                                        .Select(error => error.ErrorMessage)
+                                                                        .FirstOrDefault());
+
+            var user = await _userManager.FindByPhoneNumberUniqueOrDefaultAsync(parameters.Key);
+            if (user == null) return BadRequest("User does not exist");
+            var singInResult = await _signInManager.CheckPasswordSignInAsync(user, parameters.Code, false);
+            if (!singInResult.Succeeded) return BadRequest("Invalid password");
+
+            await _signInManager.SignInAsync(user, parameters.RememberMe);
+
+            return Ok();
+        }
 
         [HttpPost]
-        public async Task<IActionResult> Register(RegisterParameters parameters)
+        public async Task<IActionResult> LoginViaEmailCode(LoginViaCodeInputModel parameters)
+        {
+            if (!ModelState.IsValid) return BadRequest(ModelState.Values.SelectMany(state => state.Errors)
+                                                                        .Select(error => error.ErrorMessage)
+                                                                        .FirstOrDefault());
+
+            var user = await _userManager.FindByEmailAsync(parameters.Key);
+            if (user == null) return BadRequest("User does not exist");
+            var singInResult = await _signInManager.CheckPasswordSignInAsync(user, parameters.Code, false);
+            if (!singInResult.Succeeded) return BadRequest("Invalid password");
+
+            await _signInManager.SignInAsync(user, parameters.RememberMe);
+
+            return Ok();
+        }
+
+        [HttpPost]
+        public async Task<IActionResult> Register(RegisterInputModel parameters)
         {
             if (!ModelState.IsValid) return BadRequest(ModelState.Values.SelectMany(state => state.Errors)
                                                                         .Select(error => error.ErrorMessage)
@@ -51,9 +84,9 @@ namespace BlazorDemo.Server.Controllers
             var result = await _userManager.CreateAsync(user, parameters.Password);
             if (!result.Succeeded) return BadRequest(result.Errors.FirstOrDefault()?.Description);
 
-            return await Login(new LoginParameters
+            return await Login(new LoginInputModel
             {
-                UserName = parameters.UserName,
+                Key = parameters.UserName,
                 Password = parameters.Password
             });
         }
@@ -72,7 +105,6 @@ namespace BlazorDemo.Server.Controllers
             //var user = await _userManager.GetUserAsync(HttpContext.User);
             return BuildUserInfo();
         }
-
 
         private UserInfo BuildUserInfo()
         {

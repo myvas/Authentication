@@ -37,30 +37,6 @@ namespace UnitTest
         }
 
         [Fact]
-        public async Task ChallengeWithRealAccount()
-        {
-            var stateFormat = new PropertiesDataFormat(new EphemeralDataProtectionProvider(NullLoggerFactory.Instance).CreateProtector("QQConnectTest"));
-            var server = CreateServer(o =>
-            {
-                ConfigureDefaults(o);
-                o.AppId = "101511936";
-                o.AppKey = "ddd401a2c48f2c470e852b00f63defb3";
-                o.StateDataFormat = stateFormat;
-            });
-
-            var transaction = await server.SendAsync("http://weixinoauth.myvas.com/challenge-qqconnect");
-            Assert.Equal(HttpStatusCode.Redirect, transaction.Response.StatusCode);
-            //Location: https://graph.qq.com/oauth2.0/authorize?response_type=code&client_id=101511936&redirect_uri=http%3A%2F%2Fweixinoauth.myvas.com%2Fsignin-qqconnect&state=CfDJ8AAAAAAAAAAAAAAAAAAAAAAgT51TbRTOV940aEHuP9dRKyz1_P4bC1T0w_ImybTBuyHZwbWxCs6V8fNKSYl-8IpwXxO5bFMFs4hjw9WWAT-n79_r6exk_ajXN2npXGDBhhSoDIlPuJBY9mzPiK0oGdyZwAfauBDRNXvnuJfbPZMMXGL9o0Eko_V0is9YlUf9ie0fJq-jvoX_a7Be0SUFm7PvGAEwseIY6e1TO3rB1r7u0A&scope=get_user_info&display=
-            Assert.StartsWith(QQConnectDefaults.AuthorizationEndpoint, transaction.Response.Headers.Location.AbsoluteUri);
-            Assert.Contains("response_type=code", transaction.Response.Headers.Location.PathAndQuery);
-            Assert.Contains("client_id=101511936", transaction.Response.Headers.Location.PathAndQuery);
-            Assert.Contains("redirect_uri=", transaction.Response.Headers.Location.PathAndQuery);
-            Assert.Contains("state=", transaction.Response.Headers.Location.PathAndQuery);
-            Assert.Contains("scope=get_user_info", transaction.Response.Headers.Location.PathAndQuery);
-            Assert.Contains("display=", transaction.Response.Headers.Location.PathAndQuery);
-        }
-
-        [Fact]
         public async Task CodeMockValid()
         {
             var stateFormat = new PropertiesDataFormat(new EphemeralDataProtectionProvider(NullLoggerFactory.Instance).CreateProtector("QQConnectTest"));
@@ -73,7 +49,7 @@ namespace UnitTest
                 {
                     OnCreatingTicket = context =>
                     {
-                        Assert.NotEqual("", context.User.GetString());
+                        Assert.NotNull(context.User);
                         Assert.Equal("Test Access Token", context.AccessToken);
                         Assert.Equal("Test Refresh Token", context.RefreshToken);
                         Assert.Equal(TimeSpan.FromSeconds(3600), context.ExpiresIn);
@@ -581,7 +557,7 @@ namespace UnitTest
         }
 
         [Fact]
-        public async Task Challenge401WillNotTriggerRedirection()
+        public async Task Return401()
         {
             var server = CreateServer(o =>
             {
@@ -624,20 +600,20 @@ namespace UnitTest
                 ConfigureDefaults(o);
                 o.StateDataFormat = stateFormat;
             },
-            context =>
+            async context =>
             {
                 var req = context.Request;
                 var res = context.Response;
                 if (req.Path == new PathString("/challenge2"))
                 {
-                    return context.ChallengeAsync("QQConnect", new QQConnectChallengeProperties
+                    await context.ChallengeAsync("QQConnect", new QQConnectChallengeProperties
                     {
                         Scope = new string[] { QQConnectScopes.get_user_info, "https://www.googleapis.com/auth/plus.login" },
                         //LoginHint = "test@example.com",
                     });
                 }
 
-                return Task.FromResult<object>(null);
+                return true;
             });
             var transaction = await server.SendAsync("https://example.com/challenge2");
             Assert.Equal(HttpStatusCode.Redirect, transaction.Response.StatusCode);
@@ -654,6 +630,44 @@ namespace UnitTest
         }
 
         [Fact]
+        public async Task ChallengeFacebookWhenAlreadySignedWithQQConnectSucceeds()
+        {
+            var stateFormat = new PropertiesDataFormat(new EphemeralDataProtectionProvider(NullLoggerFactory.Instance).CreateProtector("QQConnectTest"));
+            var server = CreateServer(o =>
+            {
+                ConfigureDefaults(o);
+                o.StateDataFormat = stateFormat;
+                o.SaveTokens = true;
+                o.BackchannelHttpHandler = CreateBackchannel();
+            });
+
+            // Skip the challenge step, go directly to the callback path
+
+            var properties = new AuthenticationProperties();
+            var correlationKey = ".xsrf";
+            var correlationId = "TestCorrelationId";
+            var correlationMarker = "N";
+            properties.Items.Add(correlationKey, correlationId);
+            properties.RedirectUri = "/me";
+            var state = stateFormat.Protect(properties);
+
+            var transaction = await server.SendAsync(
+                "https://example.com" + QQConnectDefaults.CallbackPath + "?code=TestCode&state=" + UrlEncoder.Default.Encode(state),
+                $".AspNetCore.Correlation.{QQConnectDefaults.AuthenticationScheme}.{correlationId}={correlationMarker}"
+                + $";.AspNetCore.Correlation.{QQConnectDefaults.AuthenticationScheme}.{correlationId}.{correlationMarker}={state}");
+            Assert.Equal(HttpStatusCode.Redirect, transaction.Response.StatusCode);
+            Assert.Equal("/me", transaction.Response.Headers.GetValues("Location").First());
+            Assert.Equal(2, transaction.SetCookie.Count);
+            Assert.Contains($".AspNetCore.Correlation.{QQConnectDefaults.AuthenticationScheme }.{correlationId}", transaction.SetCookie[0]); // Delete
+            Assert.Contains(".AspNetCore." + TestExtensions.CookieAuthenticationScheme, transaction.SetCookie[1]);
+
+            var authCookie = transaction.AuthenticationCookieValue;
+            transaction = await server.SendAsync("https://example.com/challenge-facebook", authCookie);
+            Assert.Equal(HttpStatusCode.Redirect, transaction.Response.StatusCode);
+            Assert.StartsWith("https://www.facebook.com/", transaction.Response.Headers.Location.OriginalString);
+        }
+
+        [Fact]
         public async Task ChallengeWillUseAuthenticationPropertiesItemsAsParameters()
         {
             var stateFormat = new PropertiesDataFormat(new EphemeralDataProtectionProvider(NullLoggerFactory.Instance).CreateProtector("QQConnectTest"));
@@ -662,20 +676,20 @@ namespace UnitTest
                 ConfigureDefaults(o);
                 o.StateDataFormat = stateFormat;
             },
-            context =>
+            async context =>
             {
                 var req = context.Request;
                 var res = context.Response;
                 if (req.Path == new PathString("/challenge2"))
                 {
-                    return context.ChallengeAsync("QQConnect", new AuthenticationProperties(new Dictionary<string, string>()
+                    await context.ChallengeAsync("QQConnect", new AuthenticationProperties(new Dictionary<string, string>()
                     {
                         { "scope", "https://www.googleapis.com/auth/plus.login" },
                         //{ "login_hint", "test@example.com" },
                     }));
                 }
 
-                return Task.FromResult<object>(null);
+                return true;
             });
             var transaction = await server.SendAsync("https://example.com/challenge2");
             Assert.Equal(HttpStatusCode.Redirect, transaction.Response.StatusCode);
@@ -700,19 +714,19 @@ namespace UnitTest
                 ConfigureDefaults(o);
                 o.StateDataFormat = stateFormat;
             },
-            context =>
+            async context =>
             {
                 var req = context.Request;
                 var res = context.Response;
                 if (req.Path == new PathString("/challenge2"))
                 {
-                    return context.ChallengeAsync("QQConnect", new QQConnectChallengeProperties(new Dictionary<string, string>
+                    await context.ChallengeAsync("QQConnect", new QQConnectChallengeProperties(new Dictionary<string, string>
                     {
                         [QQConnectChallengeProperties.ScopeKey] = "https://www.googleapis.com/auth/plus.login",
                     }));
                 }
 
-                return Task.FromResult<object>(null);
+                return true;
             });
             var transaction = await server.SendAsync("https://example.com/challenge2");
             Assert.Equal(HttpStatusCode.Redirect, transaction.Response.StatusCode);
@@ -775,6 +789,7 @@ namespace UnitTest
                     var result = await context.AuthenticateAsync("QQConnect");
                     Assert.NotNull(result.Failure);
                 }
+                return true;
             });
             var transaction = await server.SendAsync("https://example.com/auth");
             Assert.Equal(HttpStatusCode.OK, transaction.Response.StatusCode);
@@ -1065,7 +1080,7 @@ namespace UnitTest
                 {
                     OnCreatingTicket = context =>
                     {
-                        Assert.NotEqual("", context.User.GetString());
+                        Assert.NotNull(context.User);
                         Assert.Equal("Test Access Token", context.AccessToken);
                         Assert.Equal("Test Refresh Token", context.RefreshToken);
                         Assert.Equal(TimeSpan.FromSeconds(3600), context.ExpiresIn);
@@ -1084,6 +1099,10 @@ namespace UnitTest
             properties.Items.Add(correlationKey, correlationValue);
             properties.RedirectUri = "/foo";
             var state = stateFormat.Protect(properties);
+
+            var state2 = stateFormat.Unprotect(state);
+            Assert.Equal(properties.RedirectUri, state2.RedirectUri);
+            Assert.Equal(properties.Items[correlationKey], state2.Items[correlationKey]);
 
             //Post a message to the QQConnect middleware
             var transaction = await server.SendAsync(
@@ -1329,41 +1348,6 @@ namespace UnitTest
             Assert.Null(transaction.FindClaimValue(ClaimTypes.Name));
         }
 
-        [Fact]
-        public async Task ChallengeFacebookWhenAlreadySignedWithQQConnectSucceeds()
-        {
-            var stateFormat = new PropertiesDataFormat(new EphemeralDataProtectionProvider(NullLoggerFactory.Instance).CreateProtector("QQConnectTest"));
-            var server = CreateServer(o =>
-            {
-                ConfigureDefaults(o);
-                o.StateDataFormat = stateFormat;
-                o.SaveTokens = true;
-                o.BackchannelHttpHandler = CreateBackchannel();
-            });
-
-            // Skip the challenge step, go directly to the callback path
-
-            var properties = new AuthenticationProperties();
-            var correlationKey = ".xsrf";
-            var correlationValue = "TestCorrelationId";
-            properties.Items.Add(correlationKey, correlationValue);
-            properties.RedirectUri = "/me";
-            var state = stateFormat.Protect(properties);
-            var transaction = await server.SendAsync(
-                $"https://example.com{QQConnectDefaults.CallbackPath}?code=TestCode&state=" + UrlEncoder.Default.Encode(state),
-                $".AspNetCore.Correlation.QQConnect.{correlationValue}=N");
-            Assert.Equal(HttpStatusCode.Redirect, transaction.Response.StatusCode);
-            Assert.Equal("/me", transaction.Response.Headers.GetValues("Location").First());
-            Assert.Equal(2, transaction.SetCookie.Count);
-            Assert.Contains($".AspNetCore.Correlation.QQConnect.{correlationValue}", transaction.SetCookie[0]); // Delete
-            Assert.Contains(".AspNetCore." + TestExtensions.CookieAuthenticationScheme, transaction.SetCookie[1]);
-
-            var authCookie = transaction.AuthenticationCookieValue;
-            transaction = await server.SendAsync("https://example.com/challenge-facebook", authCookie);
-            Assert.Equal(HttpStatusCode.Redirect, transaction.Response.StatusCode);
-            Assert.StartsWith("https://www.facebook.com/", transaction.Response.Headers.Location.OriginalString);
-        }
-
         private HttpMessageHandler CreateBackchannel()
         {
             return new TestHttpMessageHandler()
@@ -1479,87 +1463,95 @@ namespace UnitTest
             }
         }
 
-        private static TestServer CreateServer(Action<QQConnectOptions> configureOptions, Func<HttpContext, Task> testpath = null)
+        private static TestServer CreateServer(Action<QQConnectOptions> configureOptions, Func<HttpContext, Task<bool>> handlerAfterAuth = null, Func<HttpContext, Func<Task>, Task> handlerBeforeAuth = null)
         {
             var builder = new WebHostBuilder()
                 .Configure(app =>
                 {
+                    if (handlerBeforeAuth != null)
+                    {
+                        app.Use(handlerBeforeAuth);
+                    }
+
                     app.UseAuthentication();
                     app.Use(async (context, next) =>
                     {
                         var req = context.Request;
                         var res = context.Response;
-                        if (req.Path == new PathString("/challenge"))
+                        var reqPath = req.Path.Value.ToLower();
+                        if (reqPath == new PathString("/challenge"))
                         {
                             await context.ChallengeAsync();
                         }
-                        else if (req.Path == new PathString("/challenge-facebook"))
+                        else if (reqPath == new PathString("/challenge-facebook"))
                         {
                             await context.ChallengeAsync(FacebookDefaults.AuthenticationScheme);
                         }
-                        else if (req.Path == new PathString("/challenge-QQConnect"))
+                        else if (reqPath == new PathString(QQConnectDefaults.CallbackPath.ToLower()))
                         {
+                            //var provider = WeixinAuthDefaults.AuthenticationScheme;
+                            //string userId = "1234567890123456789012";
+                            //// Request a redirect to the external login provider.
+                            //var redirectUrl = "/Account/ExternalLoginCallback?returnUrl=%2FHome%2FUserInfo";
+                            //var properties = new AuthenticationProperties { RedirectUri = redirectUrl };
+                            //properties.Items["LoginProvider"] = provider;
+                            //if (userId != null)
+                            //{
+                            //    properties.Items["XsrfId"] = userId;
+                            //}
+                            //await context.ChallengeAsync(WeixinAuthDefaults.AuthenticationScheme, properties);
                             await context.ChallengeAsync(QQConnectDefaults.AuthenticationScheme);
                         }
-                        else if (req.Path == new PathString("/qq")) //http://demo.auth.myvas.com/qq
+                        else if (reqPath == new PathString("/tokens"))
                         {
-                            await context.ChallengeAsync(QQConnectDefaults.AuthenticationScheme);
-                        }
-                        else if (req.Path == new PathString("/tokens"))
-                        {
-                            var result = await context.AuthenticateAsync(TestExtensions.CookieAuthenticationScheme);
+                            var result = await context.AuthenticateAsync(QQConnectDefaults.AuthenticationScheme);
                             var tokens = result.Properties.GetTokens();
                             res.Describe(tokens);
                         }
-                        else if (req.Path == new PathString("/me"))
+                        else if (reqPath == new PathString("/me"))
                         {
                             res.Describe(context.User);
                         }
-                        else if (req.Path == new PathString("/authenticate"))
-                        {
-                            var result = await context.AuthenticateAsync(TestExtensions.CookieAuthenticationScheme);
-                            res.Describe(result.Principal);
-                        }
-                        else if (req.Path == new PathString("/authenticate-QQConnect"))
+                        else if (reqPath == new PathString("/authenticate"))
                         {
                             var result = await context.AuthenticateAsync(QQConnectDefaults.AuthenticationScheme);
                             res.Describe(result?.Principal);
                         }
-                        else if (req.Path == new PathString("/authenticate-facebook"))
+                        else if (reqPath == new PathString("/authenticate-facebook"))
                         {
                             var result = await context.AuthenticateAsync(FacebookDefaults.AuthenticationScheme);
                             res.Describe(result?.Principal);
                         }
-                        else if (req.Path == new PathString("/401"))
+                        else if (reqPath == new PathString("/authenticate-" + QQConnectDefaults.AuthenticationScheme.ToLower()))
+                        {
+                            var result = await context.AuthenticateAsync(QQConnectDefaults.AuthenticationScheme);
+                            res.Describe(result?.Principal);
+                        }
+                        else if (reqPath == new PathString("/401"))
                         {
                             res.StatusCode = (int)HttpStatusCode.Unauthorized;// 401;
                         }
-                        else if (req.Path == new PathString("/unauthorized"))
+                        else if (reqPath == new PathString("/unauthorized"))
                         {
                             // Simulate Authorization failure
                             var result = await context.AuthenticateAsync(QQConnectDefaults.AuthenticationScheme);
                             await context.ChallengeAsync(QQConnectDefaults.AuthenticationScheme);
                         }
-                        else if (req.Path == new PathString("/unauthorized-auto"))
-                        {
-                            var result = await context.AuthenticateAsync(QQConnectDefaults.AuthenticationScheme);
-                            await context.ChallengeAsync(QQConnectDefaults.AuthenticationScheme);
-                        }
-                        else if (req.Path == new PathString("/signin"))
+                        else if (reqPath == new PathString("/signin"))
                         {
                             await Assert.ThrowsAsync<InvalidOperationException>(() => context.SignInAsync(QQConnectDefaults.AuthenticationScheme, new ClaimsPrincipal()));
                         }
-                        else if (req.Path == new PathString("/signout"))
+                        else if (reqPath == new PathString("/signout"))
                         {
                             await Assert.ThrowsAsync<InvalidOperationException>(() => context.SignOutAsync(QQConnectDefaults.AuthenticationScheme));
                         }
-                        else if (req.Path == new PathString("/forbid"))
+                        else if (reqPath == new PathString("/forbid"))
                         {
                             await context.ForbidAsync(QQConnectDefaults.AuthenticationScheme);
                         }
-                        else if (testpath != null)
+                        else if (handlerAfterAuth != null)
                         {
-                            await testpath(context);
+                            await handlerAfterAuth(context);
                         }
                         else
                         {

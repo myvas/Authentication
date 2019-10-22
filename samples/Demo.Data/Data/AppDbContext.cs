@@ -1,4 +1,6 @@
+using System.Collections.Generic;
 using Demo.Models;
+using Demo.Shared;
 using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore;
 
@@ -10,6 +12,8 @@ namespace Demo
             : base(options)
         {
         }
+
+        public DbSet<NotificationSubscription> NotificationSubscriptions { get; set; }
 
         protected override void OnModelCreating(ModelBuilder builder)
         {

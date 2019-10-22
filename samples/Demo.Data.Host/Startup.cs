@@ -25,7 +25,7 @@ namespace Demo.Data
         {
             services.AddDbContext<AppDbContext>(options =>
             options.UseSqlite(Configuration.GetConnectionString("DefaultConnection"),
-                x => x.MigrationsAssembly("Demo.Data")));
+                x => x.MigrationsAssembly("Demo.Data.Host")));
 
             services.AddIdentity<AppUser, AppRole>()
                 .AddEntityFrameworkStores<AppDbContext>()

@@ -76,7 +76,7 @@ namespace UnitTest
                 {
                     OnCreatingTicket = context =>
                     {
-                        Assert.NotEqual("", context.User.GetString());
+                        Assert.NotNull(context.User);
                         Assert.Equal("Test Access Token", context.AccessToken);
                         Assert.Equal("Test Refresh Token", context.RefreshToken);
                         Assert.Equal(TimeSpan.FromSeconds(3600), context.ExpiresIn);
@@ -1076,7 +1076,7 @@ namespace UnitTest
                 {
                     OnCreatingTicket = context =>
                     {
-                        Assert.NotEqual("", context.User.GetString());
+                        Assert.NotNull(context.User);
                         Assert.Equal("Test Access Token", context.AccessToken);
                         Assert.Equal("Test Refresh Token", context.RefreshToken);
                         Assert.Equal(TimeSpan.FromSeconds(3600), context.ExpiresIn);
@@ -1395,7 +1395,7 @@ namespace UnitTest
             properties.RedirectUri = "/me";
             var state = stateFormat.Protect(properties);
             var transaction = await server.SendAsync(
-                $"https://example.com/signin-{WeixinAuthDefaults.AuthenticationScheme}?code=TestCode&state={UrlEncoder.Default.Encode(correlationId)}",
+                $"https://example.com{WeixinAuthDefaults.CallbackPath}?code=TestCode&state={UrlEncoder.Default.Encode(correlationId)}",
                 $".AspNetCore.Correlation.{WeixinAuthDefaults.AuthenticationScheme}.{correlationId}={correlationMarker}"
                 + $";.AspNetCore.Correlation.{WeixinAuthDefaults.AuthenticationScheme}.{correlationId}.{correlationMarker}={state}");
             Assert.Equal(HttpStatusCode.Redirect, transaction.Response.StatusCode);
