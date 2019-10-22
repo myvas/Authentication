@@ -1,10 +1,10 @@
-*This GitHub project has been abandoned.* Ongoing development on this project can be found in
+**This GitHub project has been abandoned.** Ongoing development on this project can be found in
 - https://github.com/myvas/AspNetCore.Authentication.QQConnect
 - https://github.com/myvas/AspNetCore.Authentication.WeixinOpen
 - https://github.com/myvas/AspNetCore.Authentication.WeixinAuth
 - https://github.com/myvas/AspNetCore.Authentication.Demo
 
-===
+---
 
 # Myvas.AspNetCore.Authentication Family
 ## 1.QQConnect
