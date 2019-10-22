@@ -1,3 +1,11 @@
+*This GitHub project has been abandoned.* Ongoing development on this project can be found in
+- https://github.com/myvas/AspNetCore.Authentication.QQConnect
+- https://github.com/myvas/AspNetCore.Authentication.WeixinOpen
+- https://github.com/myvas/AspNetCore.Authentication.WeixinAuth
+- https://github.com/myvas/AspNetCore.Authentication.Demo
+
+===
+
 # Myvas.AspNetCore.Authentication Family
 ## 1.QQConnect
 An ASP.NET Core authentication middleware: QQConnect for https://connect.qq.com (腾讯QQ互联平台/QQ登录）
